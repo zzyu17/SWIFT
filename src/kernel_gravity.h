@@ -98,6 +98,64 @@ __attribute__((const)) INLINE static float kernel_grav_force_eval(
   return W;
 }
 
+#ifdef __ARM_NEON
+
+#include <arm_neon.h>
+
+/**
+ * @brief NEON vectorized gravity softening kernel for forces.
+ * Processes 4 u-values simultaneously using float32x4_t.
+ * Implements Wendland-C2: W(u) = 21u⁵ - 90u⁴ + 140u³ - 84u² + 14
+ */
+__attribute__((always_inline, const)) INLINE static float32x4_t
+kernel_grav_force_eval_neon(const float32x4_t u) {
+
+  float32x4_t u2, u3, u4, u5;
+  float32x4_t W;
+
+  u2 = vmulq_f32(u, u);
+  u3 = vmulq_f32(u2, u);
+  u4 = vmulq_f32(u3, u);
+  u5 = vmulq_f32(u4, u);
+
+  /* 21*u⁵ - 90*u⁴ + 140*u³ - 84*u² + 14 */
+  W = vmlaq_n_f32(vdupq_n_f32(14.f), u5, 21.f);
+  W = vmlsq_n_f32(W, u4, 90.f);
+  W = vmlaq_n_f32(W, u3, 140.f);
+  W = vmlsq_n_f32(W, u2, 84.f);
+
+  return W;
+}
+
+/**
+ * @brief NEON vectorized gravity softening kernel for potential.
+ * Processes 4 u-values simultaneously using float32x4_t.
+ * Implements Wendland-C2: W(u) = 3u⁷ - 15u⁶ + 28u⁵ - 21u⁴ + 7u² - 3
+ */
+__attribute__((always_inline, const)) INLINE static float32x4_t
+kernel_grav_pot_eval_neon(const float32x4_t u) {
+
+  float32x4_t u2, u4, u5, u6, u7;
+  float32x4_t W;
+
+  u2 = vmulq_f32(u, u);
+  u4 = vmulq_f32(u2, u2);
+  u5 = vmulq_f32(u4, u);
+  u6 = vmulq_f32(u5, u);
+  u7 = vmulq_f32(u6, u);
+
+  /* 3*u⁷ - 15*u⁶ + 28*u⁵ - 21*u⁴ + 7*u² - 3 */
+  W = vmlaq_n_f32(vdupq_n_f32(-3.f), u7, 3.f);
+  W = vmlsq_n_f32(W, u6, 15.f);
+  W = vmlaq_n_f32(W, u5, 28.f);
+  W = vmlsq_n_f32(W, u4, 21.f);
+  W = vmlaq_n_f32(W, u2, 7.f);
+
+  return W;
+}
+
+#endif /* __ARM_NEON */
+
 #ifdef SWIFT_GRAVITY_FORCE_CHECKS
 
 /**
