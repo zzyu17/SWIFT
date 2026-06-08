@@ -282,6 +282,39 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
 
         /* cj is local */
 
+#ifdef __ARM_NEON
+        /* Loop over source particles, 4 at a time. */
+        for (int j = 0; j < gcount_j; j += 4) {
+          float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
+            const struct gpart *gpj = &gparts_j[j + k];
+            const float hj = gravity_get_softening(gpj, grav_props);
+            dx[k] = gpj->x[0] - x_i;
+            dy[k] = gpj->x[1] - y_i;
+            dz[k] = gpj->x[2] - z_i;
+            r2_val[k] = dx[k]*dx[k] + dy[k]*dy[k] + dz[k]*dz[k];
+            mass_val[k] = gpj->mass;
+            h_val[k] = max(h_i, hj);
+            h_inv_val[k] = 1.f / h_val[k];
+            h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          float32x4_t r2_v = vld1q_f32(r2_val);
+          float32x4_t h_v = vld1q_f32(h_val);
+          float32x4_t h2_v = vmulq_f32(h_v, h_v);
+          float32x4_t h_inv_v = vld1q_f32(h_inv_val);
+          float32x4_t h_inv3_v = vld1q_f32(h_inv3_val);
+          float32x4_t mass_j_v = vld1q_f32(mass_val);
+          float32x4_t dx_v = vld1q_f32(dx);
+          float32x4_t dy_v = vld1q_f32(dy);
+          float32x4_t dz_v = vld1q_f32(dz);
+          float32x4_t f_ij_v, pot_ij_v;
+          runner_iact_grav_pp_full_neon(r2_v, h2_v, h_inv_v, h_inv3_v, mass_j_v, &f_ij_v, &pot_ij_v);
+          a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+          a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+          a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+          pot += vaddvq_f32(pot_ij_v);
+        }
+#else
         /* Loop over source particles */
         for (int j = 0; j < gcount_j; ++j) {
 
@@ -347,11 +380,45 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
           accumulate_add_f(&gparts_i[i].a_grav_p2p[2], a_z);
 #endif
         }
+#endif
 
       } else {
 
         /* cj is foreign */
 
+#ifdef __ARM_NEON
+        /* Loop over source particles, 4 at a time. */
+        for (int j = 0; j < gcount_j; j += 4) {
+          float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
+            const struct gpart_foreign *gpj = &gparts_foreign_j[j + k];
+            const float hj = gravity_get_softening_foreign(gpj, grav_props);
+            dx[k] = gpj->x[0] - x_i;
+            dy[k] = gpj->x[1] - y_i;
+            dz[k] = gpj->x[2] - z_i;
+            r2_val[k] = dx[k]*dx[k] + dy[k]*dy[k] + dz[k]*dz[k];
+            mass_val[k] = gpj->mass;
+            h_val[k] = max(h_i, hj);
+            h_inv_val[k] = 1.f / h_val[k];
+            h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          float32x4_t r2_v = vld1q_f32(r2_val);
+          float32x4_t h_v = vld1q_f32(h_val);
+          float32x4_t h2_v = vmulq_f32(h_v, h_v);
+          float32x4_t h_inv_v = vld1q_f32(h_inv_val);
+          float32x4_t h_inv3_v = vld1q_f32(h_inv3_val);
+          float32x4_t mass_j_v = vld1q_f32(mass_val);
+          float32x4_t dx_v = vld1q_f32(dx);
+          float32x4_t dy_v = vld1q_f32(dy);
+          float32x4_t dz_v = vld1q_f32(dz);
+          float32x4_t f_ij_v, pot_ij_v;
+          runner_iact_grav_pp_full_neon(r2_v, h2_v, h_inv_v, h_inv3_v, mass_j_v, &f_ij_v, &pot_ij_v);
+          a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+          a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+          a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+          pot += vaddvq_f32(pot_ij_v);
+        }
+#else
         /* Loop over source particles */
         for (int j = 0; j < gcount_j; ++j) {
 
@@ -414,6 +481,7 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
           accumulate_add_f(&gparts_i[i].a_grav_p2p[2], a_z);
 #endif
         }
+#endif
       }
     }
     /* Store everything back in cache */
@@ -558,6 +626,40 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
 
         /* cj is local */
 
+#ifdef __ARM_NEON
+        /* Loop over source particles, 4 at a time. */
+        for (int j = 0; j < gcount_j; j += 4) {
+          float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
+            const struct gpart *gpj = &gparts_j[j + k];
+            const float hj = gravity_get_softening(gpj, grav_props);
+            dx[k] = gpj->x[0] - x_i;
+            dy[k] = gpj->x[1] - y_i;
+            dz[k] = gpj->x[2] - z_i;
+            r2_val[k] = dx[k]*dx[k] + dy[k]*dy[k] + dz[k]*dz[k];
+            mass_val[k] = gpj->mass;
+            h_val[k] = max(h_i, hj);
+            h_inv_val[k] = 1.f / h_val[k];
+            h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          float32x4_t r2_v = vld1q_f32(r2_val);
+          float32x4_t h_v = vld1q_f32(h_val);
+          float32x4_t h2_v = vmulq_f32(h_v, h_v);
+          float32x4_t h_inv_v = vld1q_f32(h_inv_val);
+          float32x4_t h_inv3_v = vld1q_f32(h_inv3_val);
+          float32x4_t mass_j_v = vld1q_f32(mass_val);
+          float32x4_t dx_v = vld1q_f32(dx);
+          float32x4_t dy_v = vld1q_f32(dy);
+          float32x4_t dz_v = vld1q_f32(dz);
+          float32x4_t r_s_inv_v = vdupq_n_f32(r_s_inv);
+          float32x4_t f_ij_v, pot_ij_v;
+          runner_iact_grav_pp_truncated_neon(r2_v, h2_v, h_inv_v, h_inv3_v, mass_j_v, r_s_inv_v, &f_ij_v, &pot_ij_v);
+          a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+          a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+          a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+          pot += vaddvq_f32(pot_ij_v);
+        }
+#else
         /* Loop over source particles */
         for (int j = 0; j < gcount_j; ++j) {
 
@@ -629,11 +731,46 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
           accumulate_add_f(&gparts_i[i].a_grav_p2p[2], a_z);
 #endif
         }
+#endif
 
       } else {
 
         /* cj is foreign */
 
+#ifdef __ARM_NEON
+        /* Loop over source particles, 4 at a time. */
+        for (int j = 0; j < gcount_j; j += 4) {
+          float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
+            const struct gpart_foreign *gpj = &gparts_foreign_j[j + k];
+            const float hj = gravity_get_softening_foreign(gpj, grav_props);
+            dx[k] = gpj->x[0] - x_i;
+            dy[k] = gpj->x[1] - y_i;
+            dz[k] = gpj->x[2] - z_i;
+            r2_val[k] = dx[k]*dx[k] + dy[k]*dy[k] + dz[k]*dz[k];
+            mass_val[k] = gpj->mass;
+            h_val[k] = max(h_i, hj);
+            h_inv_val[k] = 1.f / h_val[k];
+            h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          float32x4_t r2_v = vld1q_f32(r2_val);
+          float32x4_t h_v = vld1q_f32(h_val);
+          float32x4_t h2_v = vmulq_f32(h_v, h_v);
+          float32x4_t h_inv_v = vld1q_f32(h_inv_val);
+          float32x4_t h_inv3_v = vld1q_f32(h_inv3_val);
+          float32x4_t mass_j_v = vld1q_f32(mass_val);
+          float32x4_t dx_v = vld1q_f32(dx);
+          float32x4_t dy_v = vld1q_f32(dy);
+          float32x4_t dz_v = vld1q_f32(dz);
+          float32x4_t r_s_inv_v = vdupq_n_f32(r_s_inv);
+          float32x4_t f_ij_v, pot_ij_v;
+          runner_iact_grav_pp_truncated_neon(r2_v, h2_v, h_inv_v, h_inv3_v, mass_j_v, r_s_inv_v, &f_ij_v, &pot_ij_v);
+          a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+          a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+          a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+          pot += vaddvq_f32(pot_ij_v);
+        }
+#else
         /* Loop over source particles */
         for (int j = 0; j < gcount_j; ++j) {
 
@@ -701,6 +838,7 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
           accumulate_add_f(&gparts_i[i].a_grav_p2p[2], a_z);
 #endif
         }
+#endif
       }
     }
 
@@ -785,8 +923,45 @@ static INLINE void runner_dopair_grav_pp_full(
     swift_align_information(float, cj_cache->epsilon, SWIFT_CACHE_ALIGNMENT);
     swift_assume_size(gcount_padded_j, VEC_SIZE);
 
-    /* Loop over every particle in the other cell. */
-    for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
+#ifdef __ARM_NEON
+    /* NEON path: non-periodic only (no vectorized nearestf available) */
+    if (!periodic) {
+      /* Loop over every particle in the other cell, 4 at a time. */
+      for (int pjd = 0; pjd < gcount_padded_j; pjd += 4) {
+        float32x4_t x_j = vld1q_f32(&cj_cache->x[pjd]);
+        float32x4_t y_j = vld1q_f32(&cj_cache->y[pjd]);
+        float32x4_t z_j = vld1q_f32(&cj_cache->z[pjd]);
+        float32x4_t mass_j = vld1q_f32(&cj_cache->m[pjd]);
+        float32x4_t h_j = vld1q_f32(&cj_cache->epsilon[pjd]);
+        float32x4_t x_i_v = vdupq_n_f32(x_i);
+        float32x4_t y_i_v = vdupq_n_f32(y_i);
+        float32x4_t z_i_v = vdupq_n_f32(z_i);
+        float32x4_t h_i_v = vdupq_n_f32(h_i);
+        float32x4_t dx_v = vsubq_f32(x_j, x_i_v);
+        float32x4_t dy_v = vsubq_f32(y_j, y_i_v);
+        float32x4_t dz_v = vsubq_f32(z_j, z_i_v);
+        /* Note: periodic correction not applied in NEON path */
+        float32x4_t r2 = vmulq_f32(dx_v, dx_v);
+        r2 = vfmaq_f32(r2, dy_v, dy_v);
+        r2 = vfmaq_f32(r2, dz_v, dz_v);
+        float32x4_t h = vmaxq_f32(h_i_v, h_j);
+        float32x4_t h2 = vmulq_f32(h, h);
+        float32x4_t h_inv = vrecpeq_f32(h);
+        float32x4_t h_inv_step = vrecpsq_f32(h, vmulq_f32(h_inv, h));
+        h_inv = vmulq_f32(h_inv, h_inv_step);
+        float32x4_t h_inv3 = vmulq_f32(h_inv, vmulq_f32(h_inv, h_inv));
+        float32x4_t f_ij_v, pot_ij_v;
+        runner_iact_grav_pp_full_neon(r2, h2, h_inv, h_inv3, mass_j, &f_ij_v, &pot_ij_v);
+        a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+        a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+        a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+        pot += vaddvq_f32(pot_ij_v);
+      }
+    } else
+#endif
+    {
+      /* Loop over every particle in the other cell. */
+      for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
 
       /* Get info about j */
       const float x_j = cj_cache->x[pjd];
@@ -891,6 +1066,7 @@ static INLINE void runner_dopair_grav_pp_full(
       if (pjd < gcount_j && !gpart_is_inhibited(&gparts_j[pjd], e))
         accumulate_inc_ll(&gparts_i[pid].num_interacted_p2p);
 #endif
+      }
     }
 
     /* Store everything back in cache */
@@ -977,8 +1153,46 @@ static INLINE void runner_dopair_grav_pp_truncated(
     swift_align_information(float, cj_cache->epsilon, SWIFT_CACHE_ALIGNMENT);
     swift_assume_size(gcount_padded_j, VEC_SIZE);
 
-    /* Loop over every particle in the other cell. */
-    for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
+#ifdef __ARM_NEON
+    /* NEON path disabled: truncated gravity is always periodic */
+    if (0) {
+      /* Loop over every particle in the other cell, 4 at a time. */
+      for (int pjd = 0; pjd < gcount_padded_j; pjd += 4) {
+        float32x4_t x_j = vld1q_f32(&cj_cache->x[pjd]);
+        float32x4_t y_j = vld1q_f32(&cj_cache->y[pjd]);
+        float32x4_t z_j = vld1q_f32(&cj_cache->z[pjd]);
+        float32x4_t mass_j = vld1q_f32(&cj_cache->m[pjd]);
+        float32x4_t h_j = vld1q_f32(&cj_cache->epsilon[pjd]);
+        float32x4_t x_i_v = vdupq_n_f32(x_i);
+        float32x4_t y_i_v = vdupq_n_f32(y_i);
+        float32x4_t z_i_v = vdupq_n_f32(z_i);
+        float32x4_t h_i_v = vdupq_n_f32(h_i);
+        float32x4_t r_s_inv_v = vdupq_n_f32(r_s_inv);
+        float32x4_t dx_v = vsubq_f32(x_j, x_i_v);
+        float32x4_t dy_v = vsubq_f32(y_j, y_i_v);
+        float32x4_t dz_v = vsubq_f32(z_j, z_i_v);
+        /* Note: periodic correction not applied in NEON path */
+        float32x4_t r2 = vmulq_f32(dx_v, dx_v);
+        r2 = vfmaq_f32(r2, dy_v, dy_v);
+        r2 = vfmaq_f32(r2, dz_v, dz_v);
+        float32x4_t h = vmaxq_f32(h_i_v, h_j);
+        float32x4_t h2 = vmulq_f32(h, h);
+        float32x4_t h_inv = vrecpeq_f32(h);
+        float32x4_t h_inv_step = vrecpsq_f32(h, vmulq_f32(h_inv, h));
+        h_inv = vmulq_f32(h_inv, h_inv_step);
+        float32x4_t h_inv3 = vmulq_f32(h_inv, vmulq_f32(h_inv, h_inv));
+        float32x4_t f_ij_v, pot_ij_v;
+        runner_iact_grav_pp_truncated_neon(r2, h2, h_inv, h_inv3, mass_j, r_s_inv_v, &f_ij_v, &pot_ij_v);
+        a_x += vaddvq_f32(vmulq_f32(f_ij_v, dx_v));
+        a_y += vaddvq_f32(vmulq_f32(f_ij_v, dy_v));
+        a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
+        pot += vaddvq_f32(pot_ij_v);
+        }
+    }
+#endif
+    {
+      /* Loop over every particle in the other cell. */
+      for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
 
       /* Get info about j */
       const float x_j = cj_cache->x[pjd];
@@ -1084,6 +1298,7 @@ static INLINE void runner_dopair_grav_pp_truncated(
       if (pjd < gcount_j && !gpart_is_inhibited(&gparts_j[pjd], e))
         accumulate_inc_ll(&gparts_i[pid].num_interacted_p2p);
 #endif
+      }
     }
 
     /* Store everything back in cache */
