@@ -1127,7 +1127,7 @@ void initialise_fftw(int N, int nr_threads) {
 #endif
 #ifdef HAVE_THREADED_FFTW
   /* Set  number of threads to use */
-  if (N >= 64) fftw_plan_with_nthreads(nr_threads);
+  if (N >= 64) fftw_plan_with_nthreads(1);
 #endif
 }
 

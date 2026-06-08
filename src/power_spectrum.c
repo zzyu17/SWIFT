@@ -1336,7 +1336,7 @@ void power_spectrum_init(struct power_spectrum_data *p,
      (probably already done for the PM, but does not matter) */
   if (p->Ngrid >= 64) {
     fftw_init_threads();
-    fftw_plan_with_nthreads(nr_threads);
+    fftw_plan_with_nthreads(1);
   }
 #else
   message("Note that FFTW is not threaded!");
@@ -1503,7 +1503,7 @@ void power_spectrum_struct_restore(struct power_spectrum_data *p,
      (probably already done for the PM, but does not matter) */
   if (p->Ngrid >= 64) {
     fftw_init_threads();
-    fftw_plan_with_nthreads(p->nr_threads);
+    fftw_plan_with_nthreads(1);
   }  // if
 #else
   message("Note that FFTW is not threaded!");
