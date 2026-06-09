@@ -286,6 +286,7 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
         /* Loop over source particles, 4 at a time. */
         for (int j = 0; j < gcount_j; j += 4) {
           float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          const int count = (gcount_j - j) < 4 ? (gcount_j - j) : 4;
           for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
             const struct gpart *gpj = &gparts_j[j + k];
             const float hj = gravity_get_softening(gpj, grav_props);
@@ -297,6 +298,15 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
             h_val[k] = max(h_i, hj);
             h_inv_val[k] = 1.f / h_val[k];
             h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          /* Pad partial batch: zero-mass lanes contribute nothing */
+          for (int k = count; k < 4; k++) {
+            dx[k] = 0.f; dy[k] = 0.f; dz[k] = 0.f;
+            r2_val[k] = 0.f;
+            mass_val[k] = 0.f;
+            h_val[k] = 1.f;
+            h_inv_val[k] = 1.f;
+            h_inv3_val[k] = 1.f;
           }
           float32x4_t r2_v = vld1q_f32(r2_val);
           float32x4_t h_v = vld1q_f32(h_val);
@@ -390,6 +400,7 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
         /* Loop over source particles, 4 at a time. */
         for (int j = 0; j < gcount_j; j += 4) {
           float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          const int count = (gcount_j - j) < 4 ? (gcount_j - j) : 4;
           for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
             const struct gpart_foreign *gpj = &gparts_foreign_j[j + k];
             const float hj = gravity_get_softening_foreign(gpj, grav_props);
@@ -401,6 +412,15 @@ static INLINE void runner_dopair_grav_pp_full_no_cache(
             h_val[k] = max(h_i, hj);
             h_inv_val[k] = 1.f / h_val[k];
             h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          /* Pad partial batch: zero-mass lanes contribute nothing */
+          for (int k = count; k < 4; k++) {
+            dx[k] = 0.f; dy[k] = 0.f; dz[k] = 0.f;
+            r2_val[k] = 0.f;
+            mass_val[k] = 0.f;
+            h_val[k] = 1.f;
+            h_inv_val[k] = 1.f;
+            h_inv3_val[k] = 1.f;
           }
           float32x4_t r2_v = vld1q_f32(r2_val);
           float32x4_t h_v = vld1q_f32(h_val);
@@ -630,6 +650,7 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
         /* Loop over source particles, 4 at a time. */
         for (int j = 0; j < gcount_j; j += 4) {
           float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          const int count = (gcount_j - j) < 4 ? (gcount_j - j) : 4;
           for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
             const struct gpart *gpj = &gparts_j[j + k];
             const float hj = gravity_get_softening(gpj, grav_props);
@@ -641,6 +662,15 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
             h_val[k] = max(h_i, hj);
             h_inv_val[k] = 1.f / h_val[k];
             h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          /* Pad partial batch: zero-mass lanes contribute nothing */
+          for (int k = count; k < 4; k++) {
+            dx[k] = 0.f; dy[k] = 0.f; dz[k] = 0.f;
+            r2_val[k] = 0.f;
+            mass_val[k] = 0.f;
+            h_val[k] = 1.f;
+            h_inv_val[k] = 1.f;
+            h_inv3_val[k] = 1.f;
           }
           float32x4_t r2_v = vld1q_f32(r2_val);
           float32x4_t h_v = vld1q_f32(h_val);
@@ -741,6 +771,7 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
         /* Loop over source particles, 4 at a time. */
         for (int j = 0; j < gcount_j; j += 4) {
           float dx[4], dy[4], dz[4], r2_val[4], h_val[4], h_inv_val[4], h_inv3_val[4], mass_val[4];
+          const int count = (gcount_j - j) < 4 ? (gcount_j - j) : 4;
           for (int k = 0; k < 4 && (j + k) < gcount_j; k++) {
             const struct gpart_foreign *gpj = &gparts_foreign_j[j + k];
             const float hj = gravity_get_softening_foreign(gpj, grav_props);
@@ -752,6 +783,15 @@ static INLINE void runner_dopair_grav_pp_truncated_no_cache(
             h_val[k] = max(h_i, hj);
             h_inv_val[k] = 1.f / h_val[k];
             h_inv3_val[k] = h_inv_val[k] * h_inv_val[k] * h_inv_val[k];
+          }
+          /* Pad partial batch: zero-mass lanes contribute nothing */
+          for (int k = count; k < 4; k++) {
+            dx[k] = 0.f; dy[k] = 0.f; dz[k] = 0.f;
+            r2_val[k] = 0.f;
+            mass_val[k] = 0.f;
+            h_val[k] = 1.f;
+            h_inv_val[k] = 1.f;
+            h_inv3_val[k] = 1.f;
           }
           float32x4_t r2_v = vld1q_f32(r2_val);
           float32x4_t h_v = vld1q_f32(h_val);
