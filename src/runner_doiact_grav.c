@@ -1002,7 +1002,8 @@ static INLINE void runner_dopair_grav_pp_full(
         a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
         pot += vaddvq_f32(pot_ij_v);
       }
-#endif
+    }
+#else
     {
       /* Loop over every particle in the other cell. */
       for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
@@ -1112,7 +1113,7 @@ static INLINE void runner_dopair_grav_pp_full(
 #endif
       }
     }
-
+#endif
     /* Store everything back in cache */
     ci_cache->a_x[pid] += a_x;
     ci_cache->a_y[pid] += a_y;
@@ -1236,12 +1237,13 @@ static INLINE void runner_dopair_grav_pp_truncated(
         pot += vaddvq_f32(pot_ij_v);
         }
     }
-#endif
+#else
     {
       /* Loop over every particle in the other cell. */
       for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
 
-      }
+      /* Get info about j */
+      const float x_j = cj_cache->x[pjd];
       const float y_j = cj_cache->y[pjd];
       const float z_j = cj_cache->z[pjd];
       const float mass_j = cj_cache->m[pjd];
@@ -1347,6 +1349,7 @@ static INLINE void runner_dopair_grav_pp_truncated(
       }
     }
 
+#endif
     /* Store everything back in cache */
     ci_cache->a_x[pid] += a_x;
     ci_cache->a_y[pid] += a_y;
