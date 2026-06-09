@@ -964,8 +964,9 @@ static INLINE void runner_dopair_grav_pp_full(
     swift_assume_size(gcount_padded_j, VEC_SIZE);
 
 #ifdef __ARM_NEON
-    /* NEON path: non-periodic only (no vectorized nearestf available) */
-    if (!periodic) {
+    {
+      const float32x4_t dim_v = vdupq_n_f32(dim[0]);
+      const float32x4_t dim_inv_v = vdupq_n_f32(1.f / dim[0]);
       /* Loop over every particle in the other cell, 4 at a time. */
       for (int pjd = 0; pjd < gcount_padded_j; pjd += 4) {
         float32x4_t x_j = vld1q_f32(&cj_cache->x[pjd]);
@@ -980,7 +981,11 @@ static INLINE void runner_dopair_grav_pp_full(
         float32x4_t dx_v = vsubq_f32(x_j, x_i_v);
         float32x4_t dy_v = vsubq_f32(y_j, y_i_v);
         float32x4_t dz_v = vsubq_f32(z_j, z_i_v);
-        /* Note: periodic correction not applied in NEON path */
+        if (periodic) {
+          dx_v = vfmsq_f32(dx_v, vrndnq_f32(vmulq_f32(dx_v, dim_inv_v)), dim_v);
+          dy_v = vfmsq_f32(dy_v, vrndnq_f32(vmulq_f32(dy_v, dim_inv_v)), dim_v);
+          dz_v = vfmsq_f32(dz_v, vrndnq_f32(vmulq_f32(dz_v, dim_inv_v)), dim_v);
+        }
         float32x4_t r2 = vmulq_f32(dx_v, dx_v);
         r2 = vfmaq_f32(r2, dy_v, dy_v);
         r2 = vfmaq_f32(r2, dz_v, dz_v);
@@ -997,7 +1002,6 @@ static INLINE void runner_dopair_grav_pp_full(
         a_z += vaddvq_f32(vmulq_f32(f_ij_v, dz_v));
         pot += vaddvq_f32(pot_ij_v);
       }
-    } else
 #endif
     {
       /* Loop over every particle in the other cell. */
@@ -1194,8 +1198,9 @@ static INLINE void runner_dopair_grav_pp_truncated(
     swift_assume_size(gcount_padded_j, VEC_SIZE);
 
 #ifdef __ARM_NEON
-    /* NEON path disabled: truncated gravity is always periodic */
-    if (0) {
+    {
+      const float32x4_t dim_v = vdupq_n_f32(dim[0]);
+      const float32x4_t dim_inv_v = vdupq_n_f32(1.f / dim[0]);
       /* Loop over every particle in the other cell, 4 at a time. */
       for (int pjd = 0; pjd < gcount_padded_j; pjd += 4) {
         float32x4_t x_j = vld1q_f32(&cj_cache->x[pjd]);
@@ -1211,7 +1216,9 @@ static INLINE void runner_dopair_grav_pp_truncated(
         float32x4_t dx_v = vsubq_f32(x_j, x_i_v);
         float32x4_t dy_v = vsubq_f32(y_j, y_i_v);
         float32x4_t dz_v = vsubq_f32(z_j, z_i_v);
-        /* Note: periodic correction not applied in NEON path */
+        dx_v = vfmsq_f32(dx_v, vrndnq_f32(vmulq_f32(dx_v, dim_inv_v)), dim_v);
+        dy_v = vfmsq_f32(dy_v, vrndnq_f32(vmulq_f32(dy_v, dim_inv_v)), dim_v);
+        dz_v = vfmsq_f32(dz_v, vrndnq_f32(vmulq_f32(dz_v, dim_inv_v)), dim_v);
         float32x4_t r2 = vmulq_f32(dx_v, dx_v);
         r2 = vfmaq_f32(r2, dy_v, dy_v);
         r2 = vfmaq_f32(r2, dz_v, dz_v);
@@ -1234,8 +1241,7 @@ static INLINE void runner_dopair_grav_pp_truncated(
       /* Loop over every particle in the other cell. */
       for (int pjd = 0; pjd < gcount_padded_j; pjd++) {
 
-      /* Get info about j */
-      const float x_j = cj_cache->x[pjd];
+      }
       const float y_j = cj_cache->y[pjd];
       const float z_j = cj_cache->z[pjd];
       const float mass_j = cj_cache->m[pjd];
