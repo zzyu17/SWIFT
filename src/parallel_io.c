@@ -66,7 +66,7 @@
 #include "xmf.h"
 
 /* The current limit of ROMIO (the underlying MPI-IO layer) is 2GB */
-#define HDF5_PARALLEL_IO_MAX_BYTES 2147000000LL
+#define HDF5_PARALLEL_IO_MAX_BYTES 4000000000LL
 
 /* Are we timing the i/o? */
 // #define IO_SPEED_MEASUREMENT
@@ -335,7 +335,7 @@ void read_array_parallel(hid_t grp, struct io_props props, size_t N,
 
   /* Create property list for collective dataset read. */
   const hid_t h_plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_COLLECTIVE);
+  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_INDEPENDENT);
 
   /* Given the limitations of ROM-IO we will need to read the data in chunk of
      HDF5_PARALLEL_IO_MAX_BYTES bytes per node until all the nodes are done. */
@@ -458,7 +458,7 @@ void prepare_array_parallel(
 
   /* Create property list for collective dataset write.    */
   const hid_t h_plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_COLLECTIVE);
+  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_INDEPENDENT);
 
   /* Set chunk size */
   // h_err = H5Pset_chunk(h_prop, rank, chunk_shape);
@@ -626,7 +626,7 @@ void write_array_parallel_chunk(const struct engine *e, hid_t h_data,
 
   /* Make a dataset creation property list and set MPI-I/O mode */
   hid_t h_plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_COLLECTIVE);
+  H5Pset_dxpl_mpio(h_plist_id, H5FD_MPIO_INDEPENDENT);
 
 #ifdef IO_SPEED_MEASUREMENT
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1721,8 +1721,8 @@ void write_output_parallel(struct engine *e,
 
   /* Set some MPI-IO parameters */
   // MPI_Info_set(info, "IBM_largeblock_io", "true");
-  MPI_Info_set(info, "romio_cb_write", "enable");
-  MPI_Info_set(info, "romio_ds_write", "disable");
+  MPI_Info_set(info, "romio_cb_write", "disable");
+  MPI_Info_set(info, "romio_ds_write", "enable");
 
   /* Activate parallel i/o */
   hid_t h_err = H5Pset_fapl_mpio(plist_id, comm, info);

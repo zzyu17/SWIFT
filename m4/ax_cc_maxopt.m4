@@ -165,7 +165,7 @@ if test "$ac_test_CFLAGS" != "set"; then
 
     clang)
      # default optimization flags for clang on all systems
-     CFLAGS="$CFLAGS -O3 -fomit-frame-pointer"
+     CFLAGS="$CFLAGS -O2 -fomit-frame-pointer"
 
      # Always good optimisation to have
      AX_CHECK_COMPILE_FLAG(-fstrict-aliasing, CFLAGS="$CFLAGS -fstrict-aliasing")
